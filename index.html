@@ -6,12 +6,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Scoredial">
+<meta name="apple-mobile-web-app-title" content="Score!">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
-<title>Scoredial</title>
+<title>Score!</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Nunito:wght@700;800;900&display=swap">
@@ -413,7 +413,7 @@ function vHome() {
     </section>`;
   }
   return `<div class="page short"><div class="home">
-    <header class="brand">${I.mark}<h1>Scoredial</h1></header>
+    <header class="brand">${I.mark}<h1>Score!</h1></header>
     ${resume}
     <button class="btn ${g ? 'ghost' : 'primary'}" data-act="newGame">Start a new game</button>
   </div></div>`;
@@ -1268,17 +1268,17 @@ function installSteps() {
     return { device: other ? 'iPhone or iPad' : 'iPhone or iPad (Safari)', steps: [
       `Tap the Share button ${SHARE_ICON} ${other ? 'next to the address bar' : 'in the toolbar at the bottom of Safari'}.`,
       'Scroll down and tap <b>Add to Home Screen</b>.',
-      'Tap <b>Add</b>, then open Scoredial from your Home Screen.'
+      'Tap <b>Add</b>, then open Score! from your Home Screen.'
     ] };
   }
   if (/Android/.test(ua)) return { device: 'Android', steps: [
     `Tap the menu ${DOTS_ICON} in the top corner of your browser.`,
     'Tap <b>Install app</b> or <b>Add to Home screen</b>.',
-    'Confirm, then open Scoredial from your Home screen.'
+    'Confirm, then open Score! from your Home screen.'
   ] };
   if (/Safari/.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return { device: 'Mac (Safari)', steps: [
     'In the menu bar, choose <b>File</b> › <b>Add to Dock</b>.',
-    'Click <b>Add</b>, then open Scoredial from your Dock.'
+    'Click <b>Add</b>, then open Score! from your Dock.'
   ] };
   if (/Firefox/.test(ua)) return { device: 'Firefox', steps: [
     'Firefox on computers can’t install web apps.',
@@ -1286,8 +1286,8 @@ function installSteps() {
   ] };
   return { device: 'computer', steps: [
     'Click the install icon at the right end of the address bar, or open the browser menu.',
-    'Choose <b>Install Scoredial</b>.',
-    'Open Scoredial from your apps or Dock.'
+    'Choose <b>Install Score!</b>.',
+    'Open Score! from your apps or Dock.'
   ] };
 }
 function showInstall() {
@@ -1298,7 +1298,7 @@ function showInstall() {
   el.innerHTML = `<button class="icon-btn install-x" data-inst="close" aria-label="Close">${I.close}</button>
     <div class="install-in">
       <div class="install-mark">${I.mark}</div>
-      <h2 id="installTitle">Install Scoredial</h2>
+      <h2 id="installTitle">Install Score!</h2>
       <p class="install-lead">Add it to your Home Screen so it opens full screen, works without a connection, and keeps your games ready.</p>
       <button class="btn primary" id="installNow" data-inst="now" ${installEvt ? '' : 'hidden'}>Install now</button>
       <div class="install-how"><div class="eyebrow">On your ${device}</div>

@@ -1,4 +1,4 @@
-const CACHE='scoredial-v37';
+const CACHE='scoredial-v39';
 const ASSETS=['./','index.html','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png'];
 // fetch fresh copies (not the browser's HTTP cache) whenever a new version installs
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(u=>new Request(u,{cache:'reload'})))));});

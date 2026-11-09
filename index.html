@@ -251,6 +251,15 @@ h2.sec{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--
 .update-bar .ub-text{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px;line-height:1.3}
 .update-bar .ub-text span{color:var(--muted);font-size:13px}
 .update-bar .btn{width:auto;min-height:40px;padding:0 16px;font-size:15px;flex:none}
+.bar .lb-btn{height:36px;padding:0 14px;border-radius:18px;background:var(--surface-2);font-weight:600;font-size:14px;flex:none}
+.pcheck .rk{margin-left:8px;font-size:13px;font-weight:500;color:var(--muted)}
+.lb-head{display:flex;justify-content:space-between;padding:0 6px 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lb-list{display:flex;flex-direction:column;gap:6px}
+.lb-row{display:flex;align-items:center;gap:12px;background:var(--surface-2);border-radius:16px;padding:10px 14px}
+.lb-n{width:20px;text-align:center;font-family:var(--num);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.lb-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-name small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.lb-score{font-family:var(--num);font-weight:900;font-size:24px;font-variant-numeric:tabular-nums}
 .mlist{display:flex;flex-direction:column;gap:4px}
 .mrow{display:flex;align-items:center;gap:10px;padding:6px 4px}
 .mrow .nm{flex:1;font-weight:600}
@@ -443,12 +452,13 @@ function vPicker() {
       <span class="names">${ps.map(p => esc(p.name)).join(', ')}</span><span class="when">${ago(r.at)}</span></button>`;
   }).join('');
   const people = [...S.people].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const tags = rankTags();
   const list = people.map(p => { const i = sel.indexOf(p.id); return `<div class="prow">
-      <button class="pcheck" data-act="toggle" data-id="${p.id}">${av(p, 40)}<span class="nm">${esc(p.name)}</span>
+      <button class="pcheck" data-act="toggle" data-id="${p.id}">${av(p, 40)}<span class="nm">${esc(p.name)}${tags[p.id] ? `<span class="rk">${tags[p.id]}</span>` : ''}</span>
       <span class="tick${i >= 0 ? ' on' : ''}" style="--c:${p.color}">${i >= 0 ? i + 1 : ''}</span></button>
       <button class="icon-btn sm" data-act="editPerson" data-id="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button></div>`; }).join('');
   return `<div class="page"><div class="wrap">
-    <div class="bar">${S.game ? `<button class="icon-btn" data-act="go" data-v="home" aria-label="Back">${I.back}</button>` : ''}<h1>New game</h1></div>
+    <div class="bar">${S.game ? `<button class="icon-btn" data-act="go" data-v="home" aria-label="Back">${I.back}</button>` : ''}<h1>New game</h1><button class="lb-btn" data-act="leaderboard">Leaderboard</button></div>
     ${rec ? `<h2 class="sec">Recent games</h2>${rec}` : ''}
     <h2 class="sec">People</h2>
     <div class="plist">${list || '<div class="empty">No one saved yet. Add the people you play with.</div>'}</div>
@@ -1184,8 +1194,54 @@ function confirmSheet(title, body, okLabel, onOk, danger) {
 }
 
 /* ---------------- actions ---------------- */
+/* ---------------- leaderboard ---------------- */
+// each finished game gives every player a finish score: 1 for first, 0 for last, evenly spaced between (ties share)
+function recordResult(g) {
+  if (!g || g.recorded || !g.history || !g.history.length) return;
+  const all = g.players.concat(g.bench || []), n = all.length;
+  if (n < 2) return;
+  const players = all.map(p => {
+    const higher = all.filter(q => q.score > p.score).length, same = all.filter(q => q.score === p.score).length;
+    const place = higher + (same + 1) / 2;
+    return { id: p.id, score: p.score, place, pts: (n - place) / (n - 1) };
+  });
+  S.results = (S.results || []).concat([{ at: Date.now(), n, players }]);
+  g.recorded = true;
+}
+function rankings() {
+  const m = new Map();
+  for (const r of S.results || []) for (const e of r.players) {
+    const s = m.get(e.id) || { id: e.id, games: 0, wins: 0, sum: 0 };
+    s.games++; s.sum += e.pts; if (e.place === 1) s.wins++;
+    m.set(e.id, s);
+  }
+  return [...m.values()].filter(s => person(s.id)).map(s => ({ ...s, avg: s.sum / s.games }))
+    .sort((a, b) => b.avg - a.avg || b.games - a.games || b.wins - a.wins);
+}
+function rankTags() {
+  const r = rankings(), t = {};
+  ['First', 'Second', 'Third'].forEach((w, i) => { if (r[i]) t[r[i].id] = w; });
+  if (r.length >= 4) t[r[r.length - 1].id] = 'Last';
+  return t;
+}
+function leaderboardSheet() {
+  return {
+    render() {
+      const r = rankings(), games = (S.results || []).length;
+      const rows = r.map((s, i) => { const p = person(s.id);
+        return `<div class="lb-row"><span class="lb-n">${i + 1}</span>${av(p, 38)}
+          <span class="lb-name">${esc(p.name)}<small>${s.games} ${s.games === 1 ? 'game' : 'games'} · ${s.wins} ${s.wins === 1 ? 'win' : 'wins'}</small></span>
+          <span class="lb-score" style="color:${p.color}">${(s.avg * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>`; }).join('');
+      return `${sheetHead('Leaderboard')}
+        <p class="note" style="margin:0 0 16px">Ranked by average finish across ${games} finished ${games === 1 ? 'game' : 'games'}. Winning scores 100 and coming last scores 0, so a 2-player win is 100 and 2nd out of 5 is 75.</p>
+        ${rows ? `<div class="lb-head"><span>Player</span><span>Rating</span></div><div class="lb-list">${rows}</div>` : '<div class="empty" style="padding:24px 4px">No finished games yet.</div>'}
+        <p class="note" style="margin:16px 0 0">A game counts once you start the next one.</p>`;
+    }
+  };
+}
 function startGame() {
   if (!sel.length) return;
+  recordResult(S.game); // the game being replaced counts toward the leaderboard
   const ps = sel.map(person).filter(Boolean);
   S.game = { id: uid(), startedAt: Date.now(), players: ps.map(p => ({ id: p.id, name: p.name, color: p.color, emoji: p.emoji, score: 0 })), history: [], redo: [], step: nextStep, turn: TURN_DEFAULT[nextStep] || 36 };
   nextStep = 1;
@@ -1242,6 +1298,7 @@ document.addEventListener('click', e => {
       break;
     }
     case 'history': openSheet(historySheet()); break;
+    case 'leaderboard': openSheet(leaderboardSheet()); break;
     case 'settings': openSheet(settingsSheet()); break;
     case 'closeSheet': closeSheet(); if (view === 'game') refreshScores(); break;
   }

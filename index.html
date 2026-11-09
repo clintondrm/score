@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scoredial">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>Scoredial</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Nunito:wght@700;800;900&display=swap">
+<style>
+/* Layout: one-screen dark app. Score rows hug the top and bottom edges, the rotary ring owns the middle. */
+:root{
+  --bg:#000000;
+  --surface:#161618;
+  --surface-2:#232327;
+  --track:#1c1c1f;
+  --line:#2c2c31;
+  --fg:#f5f5f7;
+  --muted:#8e8e98;
+  --primary:#f5f5f7;
+  --on-primary:#000000;
+  --danger:#ff5a4e;
+  --num:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;
+  --ui:-apple-system,BlinkMacSystemFont,"Figtree","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box;background:var(--bg)}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:16px;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+input{-webkit-user-select:text;user-select:text}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+#app{height:100%;display:flex;flex-direction:column}
+
+/* ---------- shared ---------- */
+.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 200px}
+.page.short{padding-bottom:32px}
+.bar{display:flex;align-items:center;gap:12px;min-height:48px;margin-bottom:8px}
+.bar h1{font-family:var(--num);font-weight:800;font-size:28px;margin:0;flex:1}
+.icon-btn{width:48px;height:48px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;flex:none;color:var(--fg)}
+.icon-btn svg{width:24px;height:24px}
+.icon-btn.sm{width:34px;height:34px;background:transparent;color:var(--muted)}
+.icon-btn.sm svg{width:18px;height:18px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h2.sec{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:28px 4px 10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:27px;padding:0 24px;font-weight:600;font-size:17px;width:100%}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.primary:disabled{opacity:.3}
+.btn.ghost{background:var(--surface-2)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--line)}
+.btn.danger.armed{background:var(--danger);color:#000;border-color:var(--danger)}
+.link{color:var(--fg);font-weight:600;font-size:14px;padding:6px 8px;border-radius:8px}
+.av{--c:#888;width:var(--s,36px);height:var(--s,36px);border-radius:50%;background:var(--c);display:inline-grid;place-items:center;font-size:calc(var(--s,36px)*.5);line-height:1;flex:none}
+.stack{display:flex}
+.stack .av{--s:30px;margin-left:-8px;box-shadow:0 0 0 2px var(--surface)}
+.stack .av:first-child{margin-left:0}
+.empty{color:var(--muted);font-size:14px;padding:6px 4px}
+
+/* ---------- home ---------- */
+.home{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;width:100%}
+.brand{display:flex;align-items:center;gap:12px;margin:28px 0 18px}
+.brand svg{width:44px;height:44px}
+.brand h1{font-family:var(--num);font-weight:900;font-size:34px;margin:0;letter-spacing:-.01em}
+.resume{background:var(--surface);border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.resume-ppl{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:12px}
+.rp{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.rp b{font-family:var(--num);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
+.rp small{font-size:12px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:14px;color:var(--muted)}
+
+/* ---------- picker ---------- */
+.recent{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border-radius:18px;padding:12px 14px;margin-bottom:8px}
+.recent .names{flex:1;min-width:0;font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent .when{font-size:12px;color:var(--muted);flex:none}
+.recent.on{box-shadow:inset 0 0 0 2px var(--fg)}
+.group{background:var(--surface);border-radius:20px;padding:12px 12px 14px;margin-bottom:10px}
+.g-head{display:flex;align-items:center;gap:6px;margin:0 2px 10px 4px}
+.g-head h3{margin:0;font-size:18px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-head .count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{--c:#888;position:relative;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 5px;border-radius:20px;background:var(--surface-2);font-weight:600;font-size:15px;max-width:100%}
+.chip .av{--s:30px}
+.chip.on{background:color-mix(in srgb,var(--c) 26%,var(--surface-2));box-shadow:inset 0 0 0 2px var(--c)}
+.chip .seat{font-style:normal;font-size:11px;font-weight:800;background:var(--c);color:#000;border-radius:9px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px;margin-left:2px}
+.chip.add{padding:0 14px;color:var(--muted);background:transparent;border:1px dashed var(--line)}
+.row-btn{display:flex;align-items:center;gap:12px;width:100%;background:var(--surface);border-radius:18px;padding:16px;font-weight:600;text-align:left}
+.row-btn span{flex:1}
+.row-btn svg{width:20px;height:20px;color:var(--muted)}
+.new-group{width:100%;border:1px dashed var(--line);border-radius:20px;padding:14px;color:var(--muted);font-weight:600}
+.tray{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--bg) 70%,transparent);padding-top:28px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5}
+.tray-inner{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.tray-ppl{display:flex;align-items:center;gap:10px;min-height:30px;font-size:13px;color:var(--muted)}
+.tray-ppl .stack{flex:none}
+.wrap{max-width:520px;margin:0 auto}
+
+/* ---------- people list ---------- */
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;align-items:center;gap:4px;background:var(--surface);border-radius:16px;padding-right:6px}
+.pcheck{flex:1;display:flex;align-items:center;gap:12px;padding:10px 12px;text-align:left;min-width:0}
+.pcheck .nm{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcheck .sub{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:12px;font-weight:800;color:#000}
+.tick.on{background:var(--c);border-color:var(--c)}
+
+/* ---------- game ---------- */
+.game{flex:1;display:flex;flex-direction:column;touch-action:none;overflow:hidden;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px 16px}
+.g-bar{display:flex;justify-content:space-between}
+.srow{display:flex;justify-content:space-around;align-items:flex-start}
+.srow.bottom{align-items:flex-end}
+.sc{flex:1;min-width:0;display:flex;justify-content:center;color:var(--c)}
+.sc-in{display:flex;flex-direction:column;align-items:center;max-width:100%;transition:transform .32s cubic-bezier(.3,1.3,.5,1)}
+.game .sc{cursor:pointer}
+.knob span.txt{font-family:var(--num);font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.sc-in{transition:none}}
+.sc .nm{font-weight:600;font-size:17px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc .val{font-family:var(--num);font-weight:800;font-size:var(--fs,64px);line-height:1.02;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sc .pend{font-family:var(--num);font-weight:800;font-size:15px;height:18px;opacity:0;transition:opacity .15s}
+.sc.live .pend{opacity:1}
+.srow.top .sc .pend{order:3}
+.ring-wrap{flex:1;min-height:0;display:grid;place-items:center;margin-block:8px}
+.ring{position:relative}
+.ring svg{position:absolute;inset:0;overflow:visible}
+.knob{position:absolute;left:0;top:0;border-radius:50%;background:var(--c);display:grid;place-items:center;touch-action:none;cursor:grab;will-change:transform;box-shadow:0 4px 18px rgba(0,0,0,.45)}
+.knob span{pointer-events:none;line-height:1;white-space:nowrap}
+.knob.active{cursor:grabbing;z-index:3;box-shadow:0 0 0 4px rgba(255,255,255,.18),0 6px 24px rgba(0,0,0,.6)}
+.center{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center}
+.center .big{font-family:var(--num);font-weight:900;color:var(--c);line-height:1;font-variant-numeric:tabular-nums}
+.center .who{font-size:12px;color:var(--muted);margin-top:3px;max-width:calc(var(--hole,120px) + 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.game{position:relative}
+.g-bar{align-items:center}
+.steppill{height:36px;padding:0 14px;border-radius:18px;background:var(--surface-2);font-weight:600;font-size:14px;color:var(--muted)}
+.steppill b{color:var(--fg);font-family:var(--num);font-weight:800;margin-left:4px}
+.quick{position:absolute;top:8px;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:2;display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:minmax(0,60px);align-content:end;gap:8px;padding-bottom:4px;background:var(--bg);pointer-events:none;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .15s,transform .15s,visibility 0s .15s}
+.quick.show{opacity:1;visibility:visible;transform:none;transition:opacity .15s,transform .15s}
+.quick div{display:grid;place-items:center;min-height:0;border-radius:16px;background:var(--surface-2);font-family:var(--num);font-weight:800;font-size:clamp(14px,4.3vw,22px);font-variant-numeric:tabular-nums;color:var(--fg);transition:transform .12s,background .12s,color .12s}
+.quick div.hot{background:var(--c);color:var(--ink);transform:scale(1.1)}
+.stepsel{display:flex;align-items:center;gap:10px}
+.stepsel span{font-size:13px;color:var(--muted);font-weight:600;flex:none}
+.stepsel .seg{flex:1;padding:3px}
+.stepsel .seg button{height:34px}
+@media (prefers-reduced-motion:reduce){.quick,.quick div{transition:none}}
+.center .hint{color:var(--muted);font-size:11px;max-width:calc(var(--hole,120px) - 10px);line-height:1.3;opacity:.75}
+
+/* ---------- sheets ---------- */
+#sheetHost{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.sheet{position:relative;background:var(--surface);width:100%;max-width:560px;max-height:92%;border-radius:28px 28px 0 0;overflow-y:auto;padding:12px max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .22s ease-out}
+.sheet.full{max-width:none;height:100%;max-height:none;border-radius:0;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;padding-top:max(12px,env(safe-area-inset-top,0px))}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sh-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sh-head h2{flex:1;margin:0;font-size:20px;font-weight:700}
+.field{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.field label,.field .lbl{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.text{height:50px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font:inherit;font-size:17px;padding:0 14px;width:100%}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.sw{aspect-ratio:1;max-width:100%;border-radius:50%;background:var(--c)}
+.sw.on{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--fg)}
+.emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.em{aspect-ratio:1;max-width:100%;border-radius:12px;font-size:24px;display:grid;place-items:center}
+.em.on{background:var(--surface-2);box-shadow:inset 0 0 0 2px var(--fg)}
+.preview{display:flex;justify-content:center;margin:4px 0 18px}
+.preview .av{--s:84px}
+.actions{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.seg{display:flex;background:var(--surface-2);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;height:40px;border-radius:10px;font-weight:600;font-size:15px;color:var(--muted)}
+.seg button.on{background:var(--fg);color:#000}
+.seg.multi{flex-wrap:wrap}
+.seg.multi button{flex:1 1 30%}
+.knob span.k3{display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--num)}
+.k3 i{font-style:normal;line-height:1.05;display:block}
+.k3 .n{font-weight:800;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.k3 .s{font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.knob{transition:opacity .15s}
+.ring.dragging .knob:not(.active){opacity:.14}
+.ring.dragging .knob:not(.active) span{visibility:hidden}
+.g-actions{display:flex;gap:8px;padding-top:12px}
+.g-actions .btn{flex:1;min-height:46px;font-size:15px;padding:0 8px;background:var(--surface-2)}
+.g-actions .btn.primary{background:var(--primary);color:var(--on-primary)}
+.game.arranging .srow{visibility:hidden}
+.ring.arranging .knob{transition:transform .22s ease,opacity .15s}
+.ring.arranging .knob.active{transition:none;cursor:grabbing}
+.quick{grid-template-columns:1fr;grid-auto-rows:minmax(0,76px);background:transparent}
+.quick .more{--c:var(--fg);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:20px;background:var(--surface-2);border:1.5px dashed var(--line);font-family:var(--ui);font-size:17px;font-weight:700}
+.quick .more small{font-size:12px;font-weight:500;color:var(--muted)}
+.quick .more::before{content:"";position:absolute;inset:0;background:var(--c);opacity:.3;transform:scaleX(0);transform-origin:left}
+.quick .more.charging{border-color:var(--c)}
+.quick .more.charging::before{transform:scaleX(1);transition:transform .5s linear}
+.quick .more span,.quick .more small{position:relative}
+.more-panel{position:absolute;top:64px;bottom:72px;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:2;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:8px;padding:12px;border-radius:24px;background:rgba(12,12,14,.95);box-shadow:0 0 0 1px var(--line);pointer-events:none;opacity:0;visibility:hidden;transform:scale(.96);transition:opacity .18s,transform .18s,visibility 0s .18s}
+.more-panel.show{opacity:1;visibility:visible;transform:none;transition:opacity .18s,transform .18s}
+.more-panel div{display:grid;place-items:center;min-height:0;border-radius:14px;background:var(--surface-2);font-family:var(--num);font-weight:800;font-size:clamp(15px,4.6vw,24px);font-variant-numeric:tabular-nums;transition:transform .12s,background .12s,color .12s}
+.more-panel div.hot{background:var(--c);color:var(--ink);transform:scale(1.08)}
+@media (prefers-reduced-motion:reduce){.quick .more.charging::before{transition:none}.more-panel{transition:none}}
+.game.no-outside .srow{display:none}
+.dtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dtile{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:16px;background:var(--surface-2);box-shadow:inset 0 0 0 2px transparent;text-align:left}
+.dtile.on{box-shadow:inset 0 0 0 2px var(--fg)}
+.dtile .mini{display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;height:146px;border-radius:10px;background:var(--bg);padding:6px 6px 5px}
+.m-row{display:flex;justify-content:space-around;min-height:22px}
+.m-row span{display:flex;flex-direction:column;align-items:center;line-height:1;min-width:0}
+.m-row small{font-size:7px;font-weight:600;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-row b{font-family:var(--num);font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+.m-ring{position:relative;width:84px;height:84px;flex:none;align-self:center;border-radius:50%;box-shadow:inset 0 0 0 28px var(--track)}
+.m-dot{position:absolute;width:26px;height:26px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.m-dot i{font-style:normal;font-family:var(--num);font-weight:900;line-height:1;white-space:nowrap}
+.dtile .dl{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px;line-height:1.25;font-weight:600;padding:0 2px}
+.dtile .dl em{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:none}
+.ring .quick{position:absolute;top:50%;left:50%;right:auto;width:var(--zd,110px);height:var(--zd,110px);padding:0;display:block;background:transparent;border-radius:50%;z-index:0;transform:translate(-50%,-50%) scale(.85)}
+.ring .quick.show{transform:translate(-50%,-50%)}
+.ring .quick .more{width:100%;height:100%;border-radius:50%;justify-content:flex-end;padding-bottom:15%;font-size:11px;font-weight:600;color:var(--muted)}
+.ring .center{z-index:1}
+.more-panel .ret{grid-column:1/-1;background:transparent;border:1.5px dashed var(--line);font-family:var(--ui);font-size:17px;font-weight:700}
+.more-panel .ret span{display:inline-flex;align-items:center;gap:8px}
+.more-panel .ret svg{width:20px;height:20px}
+.game > .quick{display:block;padding:0;top:0;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;background:var(--bg)}
+.game > .quick .more{height:100%;flex-direction:row;border-radius:24px;font-size:16px}
+.game > .quick .more.hot{transform:none;color:var(--fg);border-style:solid;border-color:var(--c);background:color-mix(in srgb,var(--c) 30%,var(--surface-2))}
+.more-panel{grid-template-rows:auto repeat(6,minmax(0,1fr))}
+.more-panel.show{pointer-events:auto}
+.more-panel .mp-head{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:2px 4px 4px;background:transparent;font-family:var(--ui);font-size:15px;font-weight:500;color:var(--muted)}
+.more-panel [data-mp]{cursor:pointer}
+.more-panel [data-mp]:active{background:var(--c);color:var(--ink);transform:scale(.97)}
+.more-panel .ret[data-mp]:active{background:var(--surface-2);color:var(--fg)}
+.btn svg{width:20px;height:20px;flex:none}
+.lead-msg{position:absolute;left:50%;z-index:4;pointer-events:none;padding:8px 16px;border-radius:20px;background:var(--surface-2);color:var(--c);font-weight:700;font-size:17px;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 1.5px var(--c);transform:translateX(-50%);animation:leadIn 2.8s ease both}
+.lead-msg.top{transform:translate(-50%,-100%)}
+@keyframes leadIn{0%{opacity:0;margin-top:10px}10%{opacity:1;margin-top:0}82%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.lead-msg{animation-name:leadFade}}
+@keyframes leadFade{0%,85%{opacity:1}100%{opacity:0}}
+#rain{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none}
+#app{position:relative;z-index:1}
+.install{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;display:flex;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .25s ease-out}
+.install-x{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}
+.install-in{width:100%;max-width:420px;margin:auto 0;display:flex;flex-direction:column;gap:16px;padding-block:40px 8px}
+.install-mark svg{width:72px;height:72px}
+.install h2{font-family:var(--num);font-weight:900;font-size:32px;margin:0;text-wrap:balance}
+.install-lead{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
+.install-how{background:var(--surface);border-radius:20px;padding:16px 18px}
+.install-how ol{margin:10px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:12px;font-size:16px;line-height:1.45}
+.install-how li::marker{color:var(--muted);font-weight:700}
+.install .ico{width:20px;height:20px;vertical-align:-4px;display:inline-block;color:#4da3ff}
+.update-bar{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));z-index:30;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 8px 10px 16px;border-radius:22px;background:var(--surface-2);box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.5);animation:up .22s ease-out}
+.update-bar .ub-text{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px;line-height:1.3}
+.update-bar .ub-text span{color:var(--muted);font-size:13px}
+.update-bar .btn{width:auto;min-height:40px;padding:0 16px;font-size:15px;flex:none}
+.mlist{display:flex;flex-direction:column;gap:4px}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px 4px}
+.mrow .nm{flex:1;font-weight:600}
+.note{font-size:13px;color:var(--muted);line-height:1.4;margin:-8px 0 18px}
+
+/* ---------- history ---------- */
+.hist-top{display:flex;justify-content:flex-end;padding:0 4px}
+.hist-scores{padding:4px 0 10px;border-bottom:1px solid var(--line)}
+.hist-scores .sc .val{--fs:44px}
+.hist-scores .sc .nm{font-size:15px}
+.hist-scores .srow + .srow{margin-top:10px}
+.hist-list{flex:1;overflow-y:auto;padding:0 4px}
+.hrow{position:relative;height:64px;border-bottom:1px solid var(--line)}
+.hrow span{position:absolute;top:50%;transform:translate(-50%,-50%);font-family:var(--num);font-weight:700;font-size:38px;font-variant-numeric:tabular-nums}
+.hist-empty{color:var(--muted);text-align:center;padding:48px 16px}
+.hist-actions{display:flex;gap:16px;padding:16px 4px 0}
+.hist-actions .btn{background:var(--surface-2);font-weight:500}
+.hist-actions .btn:disabled{opacity:.35}
+.hist-actions svg{width:20px;height:20px}
+
+.toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#000;font-weight:600;font-size:14px;padding:10px 16px;border-radius:20px;z-index:40;pointer-events:none;animation:up .2s ease-out;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:reduce){.sheet,.toast{animation:none}}
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+<div id="sheetHost" hidden></div>
+
+<script>
+(() => {
+const KEY = 'scoredial.v1';
+const COLORS = ['#E8892F','#8E44A0','#FCF64F','#C92B68','#2457D0','#2FBF71','#18B5AE','#E5483B','#9FD13A','#4DB3F2','#B07A45','#E7E3D8'];
+const EMOJIS = ['🦊','🐻','🐼','🐸','🐙','🦄','🐢','🦉','🐝','🐳','🦁','🐯','🐨','🐷','🐵','🐧','🦖','🐲','🌵','🌻','🍄','🍕','🌮','🍩','🍉','🍒','⭐','🌙','🔥','⚡','🌈','❄️','🎲','♟️','🃏','🎯','🚀','👑','💎','🎸','🏀','⚽','🎨','🤖','👻','🧙','🦋','🐞'];
+const MAX_PLAYERS = 8;
+const STEPS = [1, 5, 10, 50, 100];
+const QUICK = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 7500, 10000];
+const HOLD_MS = 500;
+let nextStep = 1;
+let lastView = null;
+let arranging = false;
+
+const I = {
+  hist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10.3 3h3.4l.5 2.4 1.7 1 2.3-.8 1.7 2.9-1.8 1.6v2l1.8 1.6-1.7 2.9-2.3-.8-1.7 1-.5 2.4h-3.4l-.5-2.4-1.7-1-2.3.8-1.7-2.9 1.8-1.6v-2L3.4 8.5l1.7-2.9 2.3.8 1.7-1z"/><circle cx="12" cy="12" r="3"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>',
+  redo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>',
+  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2A5 5 0 0 1 21.5 19"/></svg>',
+  mark:'<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="none" stroke="#232327" stroke-width="10"/><path d="M24 6a18 18 0 0 1 17.1 12.4" fill="none" stroke="#E8892F" stroke-width="10" stroke-linecap="round" opacity=".45"/><circle cx="41.1" cy="18.4" r="6" fill="#E8892F"/><circle cx="12" cy="37" r="6" fill="#2457D0"/><circle cx="9" cy="17" r="6" fill="#FCF64F"/></svg>'
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------------- storage ---------------- */
+function defaultPeople() {
+  const mk = (name, color, emoji) => ({ id: uid(), name, color, emoji });
+  return [
+    mk('Clinton', '#2457D0', '🤓'),
+    mk('Cam', '#8E44A0', '🏋️‍♀️'),
+    mk('Logan', '#C92B68', '💅'),
+    mk('Ashlee', '#FCF64F', '👩‍💻'),
+    mk('Jordan', '#E8892F', '🇯🇴'),
+    mk('Brandon', '#18B5AE', '🦄'),
+    mk('Peter', '#2FBF71', '🏈')
+  ];
+}
+// names of the first draft's sample people, so an untouched sample list can be swapped for the new defaults
+const OLD_SAMPLE = 'Ashley,Cam,Clinton,Dee,Jordan,Logan,Marcus,Priya';
+function seed() {
+  const mk = (name, color, emoji) => ({ id: uid(), name, color, emoji });
+  return {
+    v: 1,
+    peopleV: 2,
+    people: defaultPeople(),
+    groups: [],
+    recents: [],
+    game: null,
+    settings: { perTurn: 36, dir: 1, knob: 'default', knobV: 2, outside: false, outsideV: 3 }
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      const base = seed();
+      const st = { ...base.settings, ...(d.settings || {}) };
+      if (!st.knobV) { st.knob = 'default'; st.knobV = 2; } // move earlier saves onto the new Default look
+      if (st.outsideV !== 3) { st.knob = 'default'; st.outside = false; st.outsideV = 3; } // everything-in-the-circle is the new default
+      const out = { ...base, ...d, settings: st };
+      if (!d.peopleV && (d.people || []).map(p => p.name).sort().join() === OLD_SAMPLE) {
+        out.people = base.people; out.groups = []; out.recents = [];
+      }
+      out.peopleV = 2;
+      return out;
+    }
+  } catch (e) {}
+  return seed();
+}
+let S = load();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+save();
+
+const person = id => S.people.find(p => p.id === id);
+// game players keep a snapshot so a deleted person doesn't break a saved game
+const pinfo = gp => { const p = person(gp.id); return p ? { ...gp, name: p.name, color: p.color, emoji: p.emoji } : gp; };
+
+/* ---------------- ui state ---------------- */
+let view = S.game ? 'home' : 'picker';
+let sel = [];
+let sheets = [];
+
+function ago(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + (h === 1 ? ' hr ago' : ' hrs ago');
+  const d = Math.round(h / 24);
+  if (d < 7) return d + (d === 1 ? ' day ago' : ' days ago');
+  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+let toastT;
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1800);
+}
+const av = (p, s) => `<span class="av" style="--c:${p.color}${s ? ';--s:' + s + 'px' : ''}">${esc(p.emoji)}</span>`;
+
+/* ---------------- views ---------------- */
+function render() {
+  const app = $('#app');
+  const keep = lastView === view ? (($('.page') || {}).scrollTop || 0) : 0;
+  if (view === 'home') app.innerHTML = vHome();
+  else if (view === 'picker') app.innerHTML = vPicker();
+  else if (view === 'people') app.innerHTML = vPeople();
+  else if (view === 'game') { app.innerHTML = vGame(); setupGame(); }
+  if (view !== 'game') releaseWake();
+  const pg = $('.page'); if (pg && keep) pg.scrollTop = keep;
+  lastView = view;
+}
+
+function vHome() {
+  const g = S.game;
+  let resume = '';
+  if (g) {
+    const ps = g.players.map(pinfo);
+    resume = `<section class="resume">
+      <div class="eyebrow">Game in progress</div>
+      <div class="resume-ppl">${ps.map(p => `<div class="rp">${av(p, 44)}<b style="color:${p.color}">${p.score}</b><small>${esc(p.name)}</small></div>`).join('')}</div>
+      <div class="meta">Started ${ago(g.startedAt)} · ${g.history.length} ${g.history.length === 1 ? 'move' : 'moves'}</div>
+      <button class="btn primary" data-act="resume">Resume game</button>
+    </section>`;
+  }
+  return `<div class="page short"><div class="home">
+    <header class="brand">${I.mark}<h1>Scoredial</h1></header>
+    ${resume}
+    <button class="btn ${g ? 'ghost' : 'primary'}" data-act="newGame">Start a new game</button>
+  </div></div>`;
+}
+
+function chip(p) {
+  const i = sel.indexOf(p.id), on = i >= 0;
+  return `<button class="chip${on ? ' on' : ''}" style="--c:${p.color}" data-act="toggle" data-id="${p.id}">${av(p)}${esc(p.name)}${on ? `<i class="seat">${i + 1}</i>` : ''}</button>`;
+}
+function tray() {
+  const ps = sel.map(person).filter(Boolean);
+  const hint = ps.length ? ps.map(p => esc(p.name)).join(', ') : 'Tap people in seating order';
+  return `<div class="tray"><div class="tray-inner">
+    <div class="tray-ppl">${ps.length ? `<div class="stack">${ps.map(p => av(p)).join('')}</div>` : ''}<span>${hint}</span></div>
+    <div class="stepsel"><span>Points per step</span><div class="seg">${STEPS.map(v => `<button class="${nextStep === v ? 'on' : ''}" data-act="nextStep" data-v="${v}">${v.toLocaleString()}</button>`).join('')}</div></div>
+    <button class="btn primary" data-act="start" ${ps.length ? '' : 'disabled'}>${ps.length ? `Start game · ${ps.length} ${ps.length === 1 ? 'player' : 'players'}` : 'Choose players'}</button>
+  </div></div>`;
+}
+const sameSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+function vPicker() {
+  const rec = S.recents.slice(0, 3).map((r, i) => {
+    const ps = r.ids.map(person).filter(Boolean);
+    if (!ps.length) return '';
+    return `<button class="recent${sameSet(sel, ps.map(p => p.id)) ? ' on' : ''}" data-act="pickRecent" data-i="${i}">
+      <div class="stack">${ps.map(p => av(p)).join('')}</div>
+      <span class="names">${ps.map(p => esc(p.name)).join(', ')}</span><span class="when">${ago(r.at)}</span></button>`;
+  }).join('');
+  const people = [...S.people].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const list = people.map(p => { const i = sel.indexOf(p.id); return `<div class="prow">
+      <button class="pcheck" data-act="toggle" data-id="${p.id}">${av(p, 40)}<span class="nm">${esc(p.name)}</span>
+      <span class="tick${i >= 0 ? ' on' : ''}" style="--c:${p.color}">${i >= 0 ? i + 1 : ''}</span></button>
+      <button class="icon-btn sm" data-act="editPerson" data-id="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button></div>`; }).join('');
+  return `<div class="page"><div class="wrap">
+    <div class="bar">${S.game ? `<button class="icon-btn" data-act="go" data-v="home" aria-label="Back">${I.back}</button>` : ''}<h1>New game</h1></div>
+    ${rec ? `<h2 class="sec">Recent games</h2>${rec}` : ''}
+    <h2 class="sec">People</h2>
+    <div class="plist">${list || '<div class="empty">No one saved yet. Add the people you play with.</div>'}</div>
+    <button class="new-group" style="margin-top:10px" data-act="addPerson">+ Add person</button>
+  </div></div>${tray()}`;
+}
+
+function vPeople() {
+  const ps = [...S.people].sort((a, b) => a.name.localeCompare(b.name));
+  const gnames = id => S.groups.filter(g => g.members.includes(id)).map(g => g.name).join(', ');
+  return `<div class="page"><div class="wrap">
+    <div class="bar"><button class="icon-btn" data-act="go" data-v="picker" aria-label="Back">${I.back}</button><h1>All people</h1></div>
+    <div class="plist">${ps.map(p => { const i = sel.indexOf(p.id); return `<div class="prow">
+      <button class="pcheck" data-act="toggle" data-id="${p.id}">${av(p, 40)}<span class="nm">${esc(p.name)}<span class="sub">${esc(gnames(p.id) || 'No group')}</span></span>
+      <span class="tick${i >= 0 ? ' on' : ''}" style="--c:${p.color}">${i >= 0 ? i + 1 : ''}</span></button>
+      <button class="icon-btn sm" data-act="editPerson" data-id="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button></div>`; }).join('') || '<div class="empty">No one saved yet.</div>'}</div>
+    <h2 class="sec"></h2>
+    <button class="new-group" data-act="addPerson">+ Add person</button>
+  </div></div>${tray()}`;
+}
+
+/* ---------------- game ---------------- */
+// clockwise seat order: top row left→right, then bottom row right→left
+function rows(n) { const t = Math.floor(n / 2); const top = [], bot = []; for (let k = 0; k < n; k++) (k < t ? top : bot).push(k); bot.reverse(); return { t, top, bot }; }
+function scoreCell(p, k, live) {
+  return `<div class="sc" id="sc${k}" style="--c:${p.color}"${live ? ` data-act="rotate" data-k="${k}"` : ''}><div class="sc-in" style="transform:rotate(${live ? (p.rot || 0) : 0}deg)"><div class="nm">${esc(p.name)}</div><div class="val">${p.score}</div><div class="pend"></div></div></div>`;
+}
+function scoreRows(ps, live = false) {
+  const { top, bot } = rows(ps.length);
+  return {
+    top: top.length ? `<div class="srow top">${top.map(k => scoreCell(ps[k], k, live)).join('')}</div>` : '',
+    bot: `<div class="srow bottom">${bot.map(k => scoreCell(ps[k], k, live)).join('')}</div>`
+  };
+}
+function vGame() {
+  const ps = S.game.players.map(pinfo);
+  const r = scoreRows(ps, true);
+  return `<div class="game${arranging ? ' arranging' : ''}${S.settings.outside ? '' : ' no-outside'}" id="game">
+    <div class="g-bar"><button class="icon-btn" data-act="history" aria-label="History">${I.hist}</button>
+      <button class="icon-btn" data-act="settings" aria-label="Settings">${I.gear}</button></div>
+    ${r.top}
+    <div class="ring-wrap" id="ringWrap"><div class="ring${arranging ? ' arranging' : ''}" id="ring">
+      <svg id="ringSvg"></svg>
+      <div class="center" id="center"></div>
+      ${ps.map((p, k) => `<div class="knob" id="kn${k}" data-k="${k}" style="--c:${p.color}"><span></span></div>`).join('')}
+    </div></div>
+    ${r.bot}
+    ${gActions()}
+    <div class="quick" id="quick" aria-hidden="true"><div class="more" id="moreZone"><span>Drop here for more options</span></div></div>
+    <div class="more-panel" id="morePanel" aria-hidden="true"><div class="mp-head" id="mpHead"></div><div class="ret" data-mp="ret" role="button"><span>${I.back}Return</span></div>${QUICK.map(v => `<div data-mp="${v}" role="button">+${v.toLocaleString()}</div>`).join('')}</div>
+  </div>`;
+}
+
+let G = null; // geometry
+const drag = {};   // active drags by knob index (multi-touch friendly)
+const anim = {};
+function setupGame() {
+  layoutRing();
+  for (const el of document.querySelectorAll('.knob')) {
+    el.addEventListener('pointerdown', knobDown);
+    el.addEventListener('pointermove', knobMove);
+    el.addEventListener('pointerup', knobUp);
+    el.addEventListener('pointercancel', knobUp);
+  }
+  sizeScores();
+  idleCenter();
+  requestWake();
+}
+function layoutRing() {
+  const wrap = $('#ringWrap'), ring = $('#ring');
+  if (!wrap || !ring) return;
+  const n = S.game.players.length;
+  const size = Math.max(160, Math.min(wrap.clientWidth, wrap.clientHeight));
+  ring.style.width = ring.style.height = size + 'px';
+  // circles keep their size; they ride a track half as thick, centred under them
+  const R = size / 2, wide = size * 0.385, rOld = R - wide / 2;
+  let knobD = Math.min(wide, (2 * Math.PI * rOld / Math.max(n, 1)) * 0.97) * 0.9;
+  if (n > 1) knobD = Math.min(knobD, 2 * rOld * Math.sin(Math.PI / n) * 0.94); // never let neighbours touch
+  const track = wide * 0.5, rMid = R - knobD / 2;
+  const t = rows(n).t;
+  const home = [...Array(n)].map((_, k) => -Math.PI / 2 + (k - (t - 1) / 2) * 2 * Math.PI / n);
+  G = { size, R, track, rMid, knobD, home, hole: Math.max(64, Math.min(2 * (rMid - track / 2), 2 * (rMid - knobD / 2)) - 12) };
+  $('#center').style.setProperty('--hole', G.hole + 'px');
+  $('#quick').style.setProperty('--zd', G.hole + 'px');
+  const ticks = stepsPerTurn();
+  let tk = '';
+  for (let i = 0; i < ticks; i++) {
+    const a = i / ticks * 2 * Math.PI, r1 = rMid + track / 2 - 4, r2 = r1 - (i % 5 === 0 ? 8 : 4);
+    tk += `<line x1="${R + r1 * Math.cos(a)}" y1="${R + r1 * Math.sin(a)}" x2="${R + r2 * Math.cos(a)}" y2="${R + r2 * Math.sin(a)}" stroke="#3a3a40" stroke-width="${i % 5 === 0 ? 2 : 1.2}" stroke-linecap="round"/>`;
+  }
+  $('#ringSvg').setAttribute('viewBox', `0 0 ${size} ${size}`);
+  $('#ringSvg').innerHTML = `<circle cx="${R}" cy="${R}" r="${rMid}" fill="none" stroke="#1c1c1f" stroke-width="${track}"/><path id="arc" fill="none" stroke-linecap="round" stroke-width="${track}" opacity=".38"/>`;
+  for (let k = 0; k < n; k++) {
+    const el = $('#kn' + k);
+    el.style.width = el.style.height = knobD + 'px';
+    paintKnob(k, drag[k] ? drag[k].pts : 0);
+    placeKnob(k, home[k] + (drag[k] ? drag[k].cum : 0));
+  }
+}
+function placeKnob(k, a) {
+  const el = $('#kn' + k); if (!el || !G) return;
+  const x = G.R + G.rMid * Math.cos(a) - G.knobD / 2, y = G.R + G.rMid * Math.sin(a) - G.knobD / 2;
+  el.style.transform = `translate(${x}px,${y}px)`;
+}
+function sizeScores() {
+  const game = $('#game'); if (!game) return;
+  for (const row of game.querySelectorAll('.srow')) {
+    const cells = row.children.length; const w = row.clientWidth / Math.max(cells, 1);
+    for (const c of row.children) {
+      const len = c.querySelector('.val').textContent.length;
+      const fs = Math.max(30, Math.min(78, w * 0.44, w * 1.25 / Math.max(len, 2.4)));
+      c.style.setProperty('--fs', fs + 'px');
+    }
+  }
+}
+function idleCenter() {
+  const c = $('#center'); if (!c) return;
+  if (arranging) { c.innerHTML = '<div class="hint">Drag a circle to a new seat</div>'; return; }
+  const word = 'clockwise';
+  c.innerHTML = S.game.history.length ? '' : `<div class="hint">Turn ${word} to score.${S.settings.outside ? '<br>Tap a name to rotate it.' : ''}</div>`;
+}
+function initials(p) {
+  const w = p.name.trim().split(/\s+/).filter(Boolean);
+  if (w.length > 1) return (w[0][0] + w[1][0]).toUpperCase();
+  const n = w[0] || '?', f = n[0].toUpperCase();
+  const clash = S.game.players.map(pinfo).some(q => q.id !== p.id && (q.name.trim()[0] || '').toUpperCase() === f);
+  return clash ? f + (n[1] || '').toLowerCase() : f;
+}
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 160 ? '#000' : '#fff';
+}
+// knob face: emoji, initials, or the live score
+// while spinning, a circle shows the change ("+ 4", "− 10"); at rest it shows the total
+function faceNum(p, pts, live) {
+  if (live) return (pts < 0 ? '− ' : '+ ') + Math.abs(pts);
+  const v = p.score + pts; return v < 0 ? '−' + Math.abs(v) : String(v);
+}
+function paintKnob(k, pts, live) {
+  const el = $('#kn' + k); if (!el || !G) return;
+  const p = pinfo(S.game.players[k]), span = el.querySelector('span'), mode = S.settings.knob;
+  if (mode === 'none') { span.className = ''; span.style.color = ''; span.textContent = ''; return; }
+  if (!mode || mode === 'default') {
+    // emoji over name over the live score
+    const s = faceNum(p, pts, live), L = [...s].length, D = G.knobD;
+    const nm = p.name.trim() || '?', NL = [...nm].length;
+    span.className = 'k3'; span.style.color = inkFor(p.color); span.style.fontSize = '';
+    span.innerHTML = `<i class="e" style="font-size:${D * .2}px">${esc(p.emoji)}</i><i class="n" style="font-size:${D * Math.min(.15, .95 / NL)}px;max-width:${D * .8}px">${esc(nm)}</i><i class="s" style="font-size:${D * (L <= 2 ? .34 : L === 3 ? .29 : L === 4 ? .23 : .19)}px">${s}</i>`;
+    return;
+  }
+  if (mode === 'score') {
+    // big score with the name underneath
+    const s = faceNum(p, pts, live), L = [...s].length, D = G.knobD;
+    const nm = p.name.trim() || '?', NL = [...nm].length;
+    span.className = 'k3'; span.style.color = inkFor(p.color); span.style.fontSize = '';
+    span.innerHTML = `<i class="s" style="font-size:${D * (L <= 2 ? .4 : L === 3 ? .33 : L === 4 ? .26 : .21)}px">${s}</i><i class="n" style="font-size:${D * Math.min(.16, 1 / NL)}px;max-width:${D * .8}px">${esc(nm)}</i>`;
+    return;
+  }
+  let t, scale;
+  if (mode === 'initials' || mode === 'score' || mode === 'name') {
+    const v = p.score + pts;
+    t = mode === 'score' ? (v < 0 ? '−' + Math.abs(v) : String(v)) : mode === 'name' ? (p.name.trim() || '?') : initials(p);
+    const L = [...t].length;
+    scale = mode === 'name' ? Math.min(.42, 1.5 / L) : L <= 1 ? .5 : L === 2 ? .42 : L === 3 ? .33 : L === 4 ? .26 : .21;
+    span.className = 'txt'; span.style.color = inkFor(p.color);
+  } else { t = p.emoji; scale = .44; span.className = ''; span.style.color = ''; }
+  span.textContent = t;
+  span.style.fontSize = (G.knobD * scale) + 'px';
+}
+// points per full turn depends on the step size; each step is one notch on the dial
+const TURN_OPTS = { 1: [12, 24, 36, 60, 100], 5: [30, 60, 120, 180, 300], 10: [60, 120, 240, 360, 600], 50: [300, 600, 1200, 1800, 3000], 100: [600, 1200, 2400, 3600, 6000] };
+const TURN_DEFAULT = { 1: 36, 5: 60, 10: 60, 50: 600, 100: 1200 };
+const turnPts = () => (S.game && S.game.turn) || TURN_DEFAULT[(S.game && S.game.step) || 1] || 36;
+const stepsPerTurn = () => Math.max(1, Math.round(turnPts() / ((S.game && S.game.step) || 1)));
+const pointsFor = cum => Math.trunc(cum / (2 * Math.PI / stepsPerTurn())) * (S.game.step || 1);
+
+function angleAt(e) {
+  const r = $('#ring').getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  return { a: Math.atan2(dy, dx), d: Math.hypot(dx, dy) };
+}
+function placeXY(k, x, y, s = 0.55) { const el = $('#kn' + k); if (el) el.style.transform = `translate(${x}px,${y}px) scale(${s})`; }
+function showQuick(on, k) {
+  const q = $('#quick'); if (!q) return;
+  if (on) {
+    // sit exactly over the New game / Reset / Rearrange bar
+    const g = $('#game').getBoundingClientRect(), bar = $('#game .g-actions');
+    if (bar) { const r = bar.getBoundingClientRect(); q.style.top = (r.top - g.top - 6) + 'px'; q.style.height = (r.height + 12) + 'px'; }
+    if (k != null) $('#moreZone').style.setProperty('--c', pinfo(S.game.players[k]).color);
+  } else $('#moreZone').classList.remove('hot');
+  q.classList.toggle('show', on);
+}
+const inside = (el, x, y, pad = 4) => { const r = el.getBoundingClientRect(); return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad; };
+function overMore(x, y) { const q = $('#quick'), z = $('#moreZone'); return !!(q && z && q.classList.contains('show') && inside(z, x, y, 6)); }
+function moreOpen() { const m = $('#morePanel'); return !!m && m.classList.contains('show'); }
+let moreFor = -1;
+function openMore(k) {
+  const m = $('#morePanel'); if (!m) return;
+  moreFor = k;
+  const p = pinfo(S.game.players[k]);
+  m.style.setProperty('--c', p.color); m.style.setProperty('--ink', inkFor(p.color));
+  $('#mpHead').innerHTML = `${av(p, 30)}<span>Add points for <b style="color:${p.color}">${esc(p.name)}</b></span>`;
+  m.classList.add('show'); m.setAttribute('aria-hidden', 'false');
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+function closeMore() { moreFor = -1; const m = $('#morePanel'); if (m) { m.classList.remove('show'); m.setAttribute('aria-hidden', 'true'); } }
+function pickMore(v) {
+  const k = moreFor; closeMore();
+  if (k < 0 || !v || !S.game.players[k]) return;
+  const before = standings(), g = S.game;
+  g.players[k].score += v;
+  g.history.push({ i: k, id: g.players[k].id, d: v, t: Date.now() });
+  g.redo = [];
+  save(); refreshScores(); announce(before);
+  toast(`+${v.toLocaleString()} for ${pinfo(g.players[k]).name}`);
+}
+// who is alone in first and alone in last (ties don't count)
+function standings() {
+  const ps = S.game.players;
+  if (ps.length < 2) return { lead: null, last: null };
+  const hi = Math.max(...ps.map(p => p.score)), lo = Math.min(...ps.map(p => p.score));
+  const top = ps.filter(p => p.score === hi), bot = ps.filter(p => p.score === lo);
+  return { lead: top.length === 1 ? top[0].id : null, last: bot.length === 1 ? bot[0].id : null };
+}
+function announce(before) {
+  const now = standings();
+  if (now.lead && now.lead !== before.lead) {
+    leadMsg('top', now.lead, 'takes the lead 🥇');
+    const gp = S.game.players.find(p => p.id === now.lead);
+    if (gp) leadRain(pinfo(gp).emoji);
+  }
+  if (now.last && now.last !== before.last) leadMsg('bottom', now.last, 'takes the rear 😔');
+}
+// a new leader's emoji rises from the bottom of the screen, behind the dial (200 of them, drawn on one canvas)
+let rainRaf = 0;
+function leadRain(emoji) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let cv = $('#rain');
+  if (!cv) { cv = document.createElement('canvas'); cv.id = 'rain'; cv.setAttribute('aria-hidden', 'true'); document.body.prepend(cv); }
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.display = 'block';
+  const ctx = cv.getContext('2d');
+  // draw the emoji once, then stamp copies of it
+  const B = 256, sp = document.createElement('canvas'); sp.width = sp.height = B;
+  const sx = sp.getContext('2d');
+  sx.font = `${B * 0.78}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  sx.textAlign = 'center'; sx.textBaseline = 'middle';
+  sx.fillText(emoji, B / 2, B / 2 + B * 0.04);
+  const parts = [];
+  for (let i = 0; i < 200; i++) {
+    const s = 50 + Math.pow(Math.random(), 4) * 910; // 50px up to 960px, mostly toward the small end
+    parts.push({ x: Math.random() * W, y: H + s + Math.random() * H * 0.9, v: (0.5 + Math.random() * 0.55) * H / 1000, s, ph: Math.random() * 6.3, dr: 6 + Math.random() * 26 });
+  }
+  cancelAnimationFrame(rainRaf);
+  let last = performance.now();
+  const frame = now => {
+    const dt = Math.min(50, now - last); last = now;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    let alive = 0;
+    for (const p of parts) {
+      p.y -= p.v * dt;
+      if (p.y < -p.s) continue;
+      alive++;
+      ctx.globalAlpha = Math.max(0, Math.min(0.85, p.y / (H * 0.3)));
+      ctx.drawImage(sp, p.x + Math.sin(p.ph + now / 650) * p.dr - p.s / 2, p.y - p.s / 2, p.s, p.s);
+    }
+    if (alive) rainRaf = requestAnimationFrame(frame);
+    else { ctx.clearRect(0, 0, W, H); cv.style.display = 'none'; }
+  };
+  rainRaf = requestAnimationFrame(frame);
+}
+function leadMsg(where, id, text) {
+  const game = $('#game'), ring = $('#ring'); if (!game || !ring) return;
+  const gp = S.game.players.find(p => p.id === id); if (!gp) return;
+  const p = pinfo(gp), g = game.getBoundingClientRect(), r = ring.getBoundingClientRect();
+  game.querySelectorAll('.lead-msg.' + where).forEach(el => el.remove());
+  const el = document.createElement('div');
+  el.className = 'lead-msg ' + where;
+  el.style.setProperty('--c', p.color);
+  el.style.top = (where === 'top' ? r.top - g.top - 10 : r.bottom - g.top + 10) + 'px';
+  el.textContent = `${p.name} ${text}`;
+  el.addEventListener('animationend', () => el.remove());
+  game.appendChild(el);
+}
+function knobDown(e) {
+  if (arranging) return arrDown(e);
+  const k = +e.currentTarget.dataset.k;
+  e.preventDefault();
+  e.currentTarget.setPointerCapture(e.pointerId);
+  cancelAnimationFrame(anim[k]);
+  e.currentTarget.style.opacity = '';
+  const start = drag[k] ? drag[k].cum : 0;
+  drag[k] = { pid: e.pointerId, last: angleAt(e).a, cum: start, pts: 0, free: false, onMore: false };
+  showQuick(true, k);
+  e.currentTarget.classList.add('active');
+  $('#ring').classList.add('dragging');
+  update(k);
+}
+function knobMove(e) {
+  if (arranging) return arrMove(e);
+  const k = +e.currentTarget.dataset.k, dr = drag[k];
+  if (!dr || dr.pid !== e.pointerId) return;
+  const { a, d } = angleAt(e);
+  if (overMore(e.clientX, e.clientY)) {
+    // over the drop zone: the circle follows the finger and any turning is cancelled
+    const r = $('#ring').getBoundingClientRect();
+    dr.free = true; dr.last = a; dr.cum = 0;
+    dr.fx = e.clientX - r.left - G.knobD / 2; dr.fy = e.clientY - r.top - G.knobD / 2;
+    if (!dr.onMore && navigator.vibrate) navigator.vibrate(8);
+    dr.onMore = true; $('#moreZone').classList.add('hot');
+    update(k); return;
+  }
+  if (dr.free) { dr.free = false; dr.onMore = false; $('#moreZone').classList.remove('hot'); dr.last = a; update(k); return; }
+  // anywhere else on screen the finger's angle around the dial drives the count
+  if (d < G.size * 0.12) return; // ignore jitter near the hub
+  let delta = a - dr.last;
+  if (delta > Math.PI) delta -= 2 * Math.PI;
+  if (delta < -Math.PI) delta += 2 * Math.PI;
+  dr.cum += delta; dr.last = a;
+  update(k);
+}
+function update(k) {
+  const dr = drag[k]; if (!dr) return;
+  if (dr.free) placeXY(k, dr.fx, dr.fy); else placeKnob(k, G.home[k] + dr.cum);
+  const pts = pointsFor(dr.cum);
+  if (pts !== dr.pts && navigator.vibrate) navigator.vibrate(4);
+  dr.pts = pts;
+  paintKnob(k, pts, true);
+  const p = pinfo(S.game.players[k]);
+  const cell = $('#sc' + k);
+  cell.classList.toggle('live', pts !== 0);
+  cell.querySelector('.val').textContent = p.score + pts;
+  cell.querySelector('.pend').textContent = pts ? (pts > 0 ? '+' : '−') + Math.abs(pts) : '';
+  // arc trail
+  const arc = $('#arc'), R = G.R, r = G.rMid, a0 = G.home[k], a1 = a0 + dr.cum;
+  arc.setAttribute('stroke', p.color);
+  arc.style.opacity = dr.free ? '0' : '';
+  if (Math.abs(dr.cum) >= 2 * Math.PI - 0.01) arc.setAttribute('d', `M ${R + r} ${R} A ${r} ${r} 0 1 1 ${R - r} ${R} A ${r} ${r} 0 1 1 ${R + r} ${R}`);
+  else if (Math.abs(dr.cum) < 0.01) arc.setAttribute('d', '');
+  else arc.setAttribute('d', `M ${R + r * Math.cos(a0)} ${R + r * Math.sin(a0)} A ${r} ${r} 0 ${Math.abs(dr.cum) > Math.PI ? 1 : 0} ${dr.cum > 0 ? 1 : 0} ${R + r * Math.cos(a1)} ${R + r * Math.sin(a1)}`);
+  // hub readout: just the amount
+  const fs = Math.min(G.hole * 0.5, G.hole * 1.45 / Math.max(String(Math.abs(pts)).length + 1, 2));
+  $('#center').innerHTML = pts ? `<div style="--c:${p.color}"><div class="big" style="font-size:${fs}px">${pts > 0 ? '+' : '−'}${Math.abs(pts)}</div></div>` : '';
+  sizeScores();
+}
+function knobUp(e) {
+  if (arranging) return arrUp(e);
+  const el = e.currentTarget, k = +el.dataset.k, dr = drag[k];
+  if (!dr || dr.pid !== e.pointerId) return;
+  el.classList.remove('active');
+  const dropped = dr.onMore;
+  const pts = dropped ? 0 : pointsFor(dr.cum);
+  if (pts !== 0) {
+    const before = standings(), g = S.game;
+    g.players[k].score += pts;
+    g.history.push({ i: k, id: g.players[k].id, d: pts, t: Date.now() });
+    g.redo = [];
+    save();
+    announce(before);
+  }
+  const from = dr.cum % (2 * Math.PI), free = dr.free /* never spin home more than one lap */, fx = dr.fx, fy = dr.fy; delete drag[k];
+  const cell = $('#sc' + k);
+  cell.classList.remove('live');
+  cell.querySelector('.val').textContent = S.game.players[k].score;
+  paintKnob(k, 0);
+  if (!Object.keys(drag).length) { $('#ring').classList.remove('dragging'); $('#arc').setAttribute('d', ''); $('#arc').style.opacity = ''; idleCenter(); showQuick(false); }
+  if (dropped) openMore(k); // dropped on More options: pick an amount with a tap
+  // spring back to its seat (along the ring, or straight back from the drop zone)
+  const t0 = performance.now(), dur = free ? 320 : Math.min(520, 220 + Math.abs(from) * 40);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const hx = G.R + G.rMid * Math.cos(G.home[k]) - G.knobD / 2, hy = G.R + G.rMid * Math.sin(G.home[k]) - G.knobD / 2;
+  const step = now => {
+    const t = reduce ? 1 : Math.min(1, (now - t0) / dur), ease = 1 - Math.pow(1 - t, 3);
+    // stay ghosted for most of the trip home, then fade back in as it lands
+    el.style.opacity = t < 1 ? String(0.1 + 0.9 * Math.pow(t, 4)) : '';
+    if (free) placeXY(k, fx + (hx - fx) * ease, fy + (hy - fy) * ease, 0.55 + 0.45 * ease);
+    else placeKnob(k, G.home[k] + from * (1 - ease));
+    if (t < 1) anim[k] = requestAnimationFrame(step);
+  };
+  anim[k] = requestAnimationFrame(step);
+  sizeScores();
+}
+function refreshScores() {
+  if (view !== 'game') return;
+  S.game.players.forEach((gp, k) => { const c = $('#sc' + k); if (c) c.querySelector('.val').textContent = gp.score; paintKnob(k, 0); });
+  sizeScores(); idleCenter();
+}
+addEventListener('resize', () => { if (view === 'game') { layoutRing(); sizeScores(); } });
+
+let wake = null;
+async function requestWake() { try { if (!wake && navigator.wakeLock) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => wake = null); } } catch (e) {} }
+function releaseWake() { try { wake && wake.release(); } catch (e) {} wake = null; }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && view === 'game') requestWake(); });
+
+/* ---------------- sheets ---------------- */
+function openSheet(s) { sheets.push(s); renderSheet(); }
+function closeSheet() { const s = sheets.pop(); renderSheet(); if (s && s.onClose) s.onClose(); }
+function renderSheet() {
+  const host = $('#sheetHost');
+  const s = sheets[sheets.length - 1];
+  if (!s) { host.hidden = true; host.innerHTML = ''; host._s = null; return; }
+  host.hidden = false;
+  const cur = host.querySelector('.sheet');
+  if (cur && host._s === s) {
+    // same sheet: refresh its contents in place so it doesn't slide in again
+    const top = cur.scrollTop; cur.innerHTML = s.render(); cur.scrollTop = top;
+  } else {
+    host.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet${s.full ? ' full' : ''}">${s.render()}</div>`;
+  }
+  host._s = s;
+  s.after && s.after(host);
+}
+const sheetHead = title => `<div class="sh-head"><h2>${title}</h2><button class="icon-btn" data-act="closeSheet" aria-label="Close">${I.close}</button></div>`;
+
+function nextColor() { const used = S.people.map(p => p.color); return COLORS.find(c => !used.includes(c)) || COLORS[S.people.length % COLORS.length]; }
+function nextEmoji() { const used = S.people.map(p => p.emoji); return EMOJIS.find(c => !used.includes(c)) || EMOJIS[0]; }
+function firstGrapheme(s) {
+  s = (s || '').trim(); if (!s) return '';
+  try { const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' }); return seg.segment(s)[Symbol.iterator]().next().value.segment; } catch (e) { return Array.from(s)[0]; }
+}
+
+function personSheet(id, opts = {}) {
+  const ex = id ? person(id) : null;
+  const d = ex ? { ...ex } : { id: null, name: '', color: nextColor(), emoji: nextEmoji() };
+  const groups = new Set(S.groups.filter(g => ex && g.members.includes(ex.id)).map(g => g.id));
+  if (opts.group) groups.add(opts.group);
+  let armed = false;
+  const s = {
+    render() {
+      const gl = []; // groups are no longer shown
+      return `${sheetHead(ex ? 'Edit person' : 'Add person')}
+      <div class="preview">${av(d, 84)}</div>
+      <div class="field"><label for="pname">Name</label><input id="pname" class="text" maxlength="24" autocomplete="off" value="${esc(d.name)}" placeholder="Name"></div>
+      <div class="field"><span class="lbl">Color</span><div class="swatches">${COLORS.map(c => `<button class="sw${c === d.color ? ' on' : ''}" style="--c:${c}" data-sact="color" data-v="${c}" aria-label="Color ${c}"></button>`).join('')}</div></div>
+      <div class="field"><span class="lbl">Emoji</span><div class="emojis">${EMOJIS.map(e => `<button class="em${e === d.emoji ? ' on' : ''}" data-sact="emoji" data-v="${e}">${e}</button>`).join('')}</div>
+        <input id="pemoji" class="text" maxlength="8" autocomplete="off" placeholder="Or type any emoji"></div>
+      ${gl.length ? `<div class="field"><span class="lbl">Groups</span><div class="chips">${gl.map(g => `<button class="chip${groups.has(g.id) ? ' on' : ''}" style="--c:${d.color}" data-sact="grp" data-v="${g.id}">${esc(g.name)}</button>`).join('')}</div></div>` : ''}
+      <div class="actions"><button class="btn primary" data-sact="save">${ex ? 'Save' : 'Add person'}</button>
+      ${ex ? `<button class="btn danger${armed ? ' armed' : ''}" data-sact="del">${armed ? 'Tap again to delete ' + esc(d.name) : 'Delete person'}</button>` : ''}</div>`;
+    },
+    after(host) {
+      const n = $('#pname', host); n.addEventListener('input', () => d.name = n.value);
+      if (!ex && !d.name) setTimeout(() => n.focus(), 50);
+      const em = $('#pemoji', host);
+      em.addEventListener('input', () => { const g = firstGrapheme(em.value); if (g) { d.emoji = g; $('.preview', host).innerHTML = av(d, 84); host.querySelectorAll('.em').forEach(b => b.classList.toggle('on', b.dataset.v === g)); } });
+    },
+    act(a, v) {
+      if (a === 'color') { d.color = v; renderSheet(); }
+      else if (a === 'emoji') { d.emoji = v; renderSheet(); }
+      else if (a === 'grp') { groups.has(v) ? groups.delete(v) : groups.add(v); renderSheet(); }
+      else if (a === 'save') {
+        d.name = d.name.trim();
+        if (!d.name) { toast('Add a name first'); return; }
+        let p = ex;
+        if (p) Object.assign(p, { name: d.name, color: d.color, emoji: d.emoji });
+        else { p = { id: uid(), name: d.name, color: d.color, emoji: d.emoji }; S.people.push(p); }
+        for (const g of S.groups) {
+          if (opts.draftGroup && g.id === opts.draftGroup.id) continue;
+          const has = g.members.includes(p.id);
+          if (groups.has(g.id) && !has) g.members.push(p.id);
+          if (!groups.has(g.id) && has) g.members = g.members.filter(x => x !== p.id);
+        }
+        if (opts.draftGroup) opts.draftGroup.members.add(p.id);
+        if (!ex && opts.select && !sel.includes(p.id) && sel.length < MAX_PLAYERS) sel.push(p.id);
+        if (!ex && opts.onCreate) opts.onCreate(p.id);
+        save(); closeSheet(); render();
+        toast(ex ? 'Saved' : `Added ${p.name}`);
+      } else if (a === 'del') {
+        if (!armed) { armed = true; renderSheet(); return; }
+        S.people = S.people.filter(p => p.id !== ex.id);
+        S.groups.forEach(g => g.members = g.members.filter(x => x !== ex.id));
+        S.recents.forEach(r => r.ids = r.ids.filter(x => x !== ex.id));
+        S.recents = S.recents.filter(r => r.ids.length);
+        sel = sel.filter(x => x !== ex.id);
+        if (opts.draftGroup) opts.draftGroup.members.delete(ex.id);
+        save(); closeSheet(); render(); toast('Deleted');
+      }
+    }
+  };
+  return s;
+}
+
+function groupSheet(id) {
+  const ex = id ? S.groups.find(g => g.id === id) : null;
+  const d = { id: ex ? ex.id : uid(), name: ex ? ex.name : '', members: new Set(ex ? ex.members : []) };
+  let armed = false;
+  return {
+    render() {
+      const ps = [...S.people].sort((a, b) => a.name.localeCompare(b.name));
+      return `${sheetHead(ex ? 'Edit group' : 'New group')}
+      <div class="field"><label for="gname">Group name</label><input id="gname" class="text" maxlength="30" autocomplete="off" value="${esc(d.name)}" placeholder="Family, Game Night, Book Club…"></div>
+      <div class="field"><span class="lbl">Members · ${d.members.size}</span>
+        <div class="mlist">${ps.map(p => `<div class="mrow">${av(p, 34)}<span class="nm">${esc(p.name)}</span>
+          <button class="icon-btn sm" data-sact="edit" data-v="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button>
+          <button class="tick${d.members.has(p.id) ? ' on' : ''}" style="--c:${p.color}" data-sact="mem" data-v="${p.id}" aria-label="Include ${esc(p.name)}">${d.members.has(p.id) ? '✓' : ''}</button></div>`).join('')}</div>
+        <button class="new-group" data-sact="add">+ Add a new person</button></div>
+      <div class="actions"><button class="btn primary" data-sact="save">${ex ? 'Save group' : 'Create group'}</button>
+      ${ex ? `<button class="btn danger${armed ? ' armed' : ''}" data-sact="del">${armed ? 'Tap again to delete group' : 'Delete group'}</button>` : ''}</div>
+      ${ex ? '<p class="note" style="margin-top:12px">Deleting a group keeps its people in All people.</p>' : ''}`;
+    },
+    after(host) { const n = $('#gname', host); n.addEventListener('input', () => d.name = n.value); if (!ex && !d.name) setTimeout(() => n.focus(), 50); },
+    act(a, v) {
+      if (a === 'mem') { d.members.has(v) ? d.members.delete(v) : d.members.add(v); renderSheet(); }
+      else if (a === 'add') openSheet(personSheet(null, { draftGroup: d }));
+      else if (a === 'edit') openSheet(personSheet(v, { draftGroup: d }));
+      else if (a === 'save') {
+        d.name = d.name.trim();
+        if (!d.name) { toast('Name the group first'); return; }
+        const members = [...d.members].filter(person);
+        if (ex) Object.assign(ex, { name: d.name, members }); else S.groups.push({ id: d.id, name: d.name, members });
+        save(); closeSheet(); render(); toast(ex ? 'Saved' : 'Group created');
+      } else if (a === 'del') {
+        if (!armed) { armed = true; renderSheet(); return; }
+        S.groups = S.groups.filter(g => g.id !== ex.id); save(); closeSheet(); render(); toast('Group deleted');
+      }
+    }
+  };
+}
+
+function historySheet() {
+  return {
+    full: true,
+    render() {
+      const g = S.game, ps = g.players.map(pinfo), n = ps.length, { top, bot } = rows(n);
+      const xOf = k => { let i = top.indexOf(k); if (i >= 0) return (i + .5) / top.length * 100; i = bot.indexOf(k); return (i + .5) / bot.length * 100; };
+      const r = scoreRows(ps);
+      const list = g.history.map(h => { const i = seatFor(h); if (i < 0) return ''; const p = ps[i]; return `<div class="hrow"><span style="left:${xOf(i)}%;color:${p.color}">${h.d > 0 ? '+' : '−'}${Math.abs(h.d)}</span></div>`; }).join('');
+      return `<div class="hist-top"><button class="icon-btn" data-act="closeSheet" aria-label="Close">${I.close}</button></div>
+        <div class="hist-scores">${r.top}${r.bot}</div>
+        <div class="hist-list" id="histList">${list || '<div class="hist-empty">No moves yet. Every turn of the dial shows up here.</div>'}</div>
+        <div class="hist-actions"><button class="btn" data-sact="undo" ${g.history.length ? '' : 'disabled'}>${I.undo} Undo</button>
+        <button class="btn" data-sact="redo" ${g.redo && g.redo.length ? '' : 'disabled'}>${I.redo} Redo</button></div>`;
+    },
+    after(host) { const l = $('#histList', host); l.scrollTop = l.scrollHeight; },
+    act(a) {
+      const g = S.game; g.redo = g.redo || [];
+      if (a === 'undo' && g.history.length) { const h = g.history.pop(); { const gp = gpFor(h); if (gp) gp.score -= h.d; } g.redo.push(h); }
+      if (a === 'redo' && g.redo.length) { const h = g.redo.pop(); { const gp = gpFor(h); if (gp) gp.score += h.d; } g.history.push(h); }
+      save(); renderSheet(); refreshScores();
+    }
+  };
+}
+
+/* display presets: what's in the circles + whether names and scores sit around the outside */
+const DISPLAYS = [
+  { knob: 'default', out: false, label: 'All in the circle', tag: 'Default' },
+  { knob: 'none', out: true, label: 'Scores outside' },
+  { knob: 'name', out: true, label: 'Names + outside' },
+  { knob: 'score', out: false, label: 'Score and name in circle' }
+];
+function miniFace(p, mode) {
+  const ink = inkFor(p.color), s = p.demo;
+  if (mode === 'none') return '';
+  if (mode === 'emoji') return `<i style="font-size:12px">${esc(p.emoji)}</i>`;
+  if (mode === 'initials') return `<i style="font-size:11px;color:${ink}">${esc(initials(p))}</i>`;
+  if (mode === 'name') return `<i style="font-size:${Math.min(8, 34 / Math.max(p.name.length, 1))}px;color:${ink}">${esc(p.name)}</i>`;
+  if (mode === 'score') return `<i style="font-size:11px;color:${ink}">${s}</i><i style="font-size:${Math.min(5.5, 28 / Math.max(p.name.length, 1))}px;color:${ink}">${esc(p.name)}</i>`;
+  return `<i style="font-size:7px">${esc(p.emoji)}</i><i style="font-size:${Math.min(5, 26 / Math.max(p.name.length, 1))}px;color:${ink}">${esc(p.name)}</i><i style="font-size:10px;color:${ink}">${s}</i>`;
+}
+function displayField() {
+  const st = S.settings, demo = [42, 17, 30];
+  let ps = (S.game ? S.game.players.map(pinfo) : S.people).slice(0, 3);
+  while (ps.length < 3) ps.push({ name: 'Player', color: COLORS[ps.length * 3], emoji: '🎲', id: 'x' + ps.length });
+  ps = ps.map((p, i) => ({ ...p, demo: demo[i] }));
+  const ang = [-126, -54, 90];
+  const tiles = DISPLAYS.map(d => {
+    const on = st.knob === d.knob && !!st.outside === d.out;
+    const row = list => `<div class="m-row">${list.map(p => `<span style="color:${p.color}"><small>${esc(p.name)}</small><b>${p.demo}</b></span>`).join('')}</div>`;
+    const dots = ps.map((p, i) => { const a = ang[i] * Math.PI / 180, x = 42 + 28 * Math.cos(a) - 13, y = 42 + 28 * Math.sin(a) - 13;
+      return `<span class="m-dot" style="background:${p.color};left:${x}px;top:${y}px">${miniFace(p, d.knob)}</span>`; }).join('');
+    return `<button class="dtile${on ? ' on' : ''}" data-sact="disp" data-v="${d.knob}|${d.out ? 1 : 0}" aria-pressed="${on}">
+      <span class="mini">${d.out ? row(ps.slice(0, 2)) : '<span class="m-row"></span>'}<span class="m-ring">${dots}</span>${d.out ? row(ps.slice(2)) : '<span class="m-row"></span>'}</span>
+      <span class="dl">${d.label}${d.tag ? `<em>${d.tag}</em>` : ''}</span></button>`;
+  }).join('');
+  return `<div class="field"><span class="lbl">Display</span><div class="dtiles">${tiles}</div></div>`;
+}
+/* ---------- add / remove players mid-game ---------- */
+// history entries point at a player id, so they survive seats changing or a player sitting out
+const histId = h => h.id || ((S.game.players[h.i] || {}).id);
+function gpFor(h) { const id = histId(h), g = S.game; return g.players.find(p => p.id === id) || (g.bench || []).find(p => p.id === id) || null; }
+function seatFor(h) { const id = histId(h); return S.game.players.findIndex(p => p.id === id); }
+function playersSheet() {
+  const g = S.game, on = new Set(g.players.map(p => p.id));
+  return {
+    render() {
+      const bench = g.bench || [];
+      const people = [...S.people].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      const scoreOf = id => { const gp = g.players.find(p => p.id === id) || bench.find(p => p.id === id); return gp ? gp.score : null; };
+      const rows = people.map(p => {
+        const sc = scoreOf(p.id), inGame = on.has(p.id);
+        const sub = sc === null ? (inGame ? 'Joins with 0' : 'Not in this game') : (inGame ? `Score ${sc.toLocaleString()}` : `Sitting out · ${sc.toLocaleString()} saved`);
+        return `<div class="prow"><button class="pcheck" data-sact="tog" data-v="${p.id}">${av(p, 40)}<span class="nm">${esc(p.name)}<span class="sub">${sub}</span></span>
+          <span class="tick${inGame ? ' on' : ''}" style="--c:${p.color}">${inGame ? '✓' : ''}</span></button></div>`;
+      }).join('');
+      return `${sheetHead('Add/Remove players')}
+        <p class="note" style="margin:0 0 14px">Anyone you remove keeps their score for this game, so you can add them back later.</p>
+        <div class="plist">${rows}</div>
+        <button class="new-group" style="margin-top:10px" data-sact="new">+ Add a new person</button>
+        <div class="actions" style="margin-top:16px"><button class="btn primary" data-sact="save">Save · ${on.size} ${on.size === 1 ? 'player' : 'players'}</button></div>`;
+    },
+    act(a, v) {
+      if (a === 'tog') {
+        if (on.has(v)) { if (on.size <= 1) { toast('Keep at least one player'); return; } on.delete(v); }
+        else { if (on.size >= MAX_PLAYERS) { toast(`Up to ${MAX_PLAYERS} players fit on the dial`); return; } on.add(v); }
+        renderSheet();
+      } else if (a === 'new') {
+        openSheet(personSheet(null, { onCreate: id => { if (on.size < MAX_PLAYERS) on.add(id); } }));
+      } else if (a === 'save') {
+        g.bench = g.bench || [];
+        for (const h of [...g.history, ...(g.redo || [])]) if (!h.id) h.id = histId(h);
+        const keep = g.players.filter(p => on.has(p.id));
+        const removed = g.players.filter(p => !on.has(p.id));
+        const added = [...on].filter(id => !keep.some(p => p.id === id)).map(id => {
+          const back = g.bench.find(b => b.id === id);
+          if (back) return back; // returning player gets their saved score
+          const p = person(id);
+          return p ? { id: p.id, name: p.name, color: p.color, emoji: p.emoji, score: 0 } : null;
+        }).filter(Boolean);
+        g.bench = g.bench.filter(b => !on.has(b.id)).concat(removed);
+        g.players = keep.concat(added);
+        for (const h of [...g.history, ...(g.redo || [])]) h.i = g.players.findIndex(p => p.id === h.id);
+        save(); sheets = []; renderSheet(); render();
+        toast('Players updated');
+      }
+    }
+  };
+}
+function settingsSheet() {
+  let armed = '', dirty = false;
+  return {
+    // the dial behind is redrawn once, when settings close
+    onClose() { if (dirty && view === 'game') render(); },
+    render() {
+      const st = S.settings;
+      return `${sheetHead('Game settings')}
+      <div class="actions" style="margin:0 0 20px"><button class="btn ghost" data-sact="players">${I.people} Add/Remove players</button></div>
+      <div class="field"><span class="lbl">Points per step</span>
+        <div class="seg">${STEPS.map(v => `<button class="${(S.game.step || 1) === v ? 'on' : ''}" data-sact="step" data-v="${v}">${v.toLocaleString()}</button>`).join('')}</div></div>
+      <div class="field"><span class="lbl">Points per full turn</span>
+        <div class="seg">${(TURN_OPTS[S.game.step || 1] || TURN_OPTS[1]).map(v => `<button class="${turnPts() === v ? 'on' : ''}" data-sact="per" data-v="${v}">${v.toLocaleString()}</button>`).join('')}</div></div>
+      <p class="note">Fewer points per turn gives finer control. More is faster for big scores.</p>
+      ${displayField()}`;
+    },
+    act(a, v) {
+      const st = S.settings;
+      if (a === 'step') { S.game.step = +v; S.game.turn = TURN_DEFAULT[+v] || 36; save(); renderSheet(); dirty = true; return; }
+      if (a === 'per') { S.game.turn = +v; save(); renderSheet(); dirty = true; }
+      else if (a === 'disp') { const [kn, out] = v.split('|'); st.knob = kn; st.outside = out === '1'; save(); renderSheet(); dirty = true; }
+      else if (a === 'players') openSheet(playersSheet());
+      else if (a === 'reset' || a === 'end') {
+        if (armed !== a) { armed = a; renderSheet(); return; }
+        if (a === 'reset') { S.game.players.forEach(p => p.score = 0); (S.game.bench || []).forEach(p => p.score = 0); S.game.history = []; S.game.redo = []; save(); sheets = []; renderSheet(); refreshScores(); toast('Scores reset'); }
+        else { sel = S.game.players.map(p => p.id).filter(person); S.game = null; save(); sheets = []; renderSheet(); view = 'picker'; render(); toast('Game ended'); }
+      }
+    }
+  };
+}
+
+/* ---------------- rearrange seats ---------------- */
+let arr = null;
+function seatAt(e) {
+  const { a } = angleAt(e); let best = 0, bd = 9;
+  G.home.forEach((h, j) => { const d = Math.abs(Math.atan2(Math.sin(a - h), Math.cos(a - h))); if (d < bd) { bd = d; best = j; } });
+  return best;
+}
+function arrDown(e) {
+  const el = e.currentTarget, k = +el.dataset.k;
+  e.preventDefault();
+  if (arr) return;
+  el.setPointerCapture(e.pointerId); el.classList.add('active');
+  arr = { k, pid: e.pointerId, order: [...S.game.players.keys()] };
+  arrMove(e);
+}
+function arrMove(e) {
+  if (!arr || arr.pid !== e.pointerId) return;
+  const r = $('#ring').getBoundingClientRect();
+  placeXY(arr.k, e.clientX - r.left - G.knobD / 2, e.clientY - r.top - G.knobD / 2, 1.08);
+  const order = [...S.game.players.keys()].filter(i => i !== arr.k);
+  order.splice(seatAt(e), 0, arr.k);
+  arr.order = order;
+  order.forEach((i, seat) => { if (i !== arr.k) placeKnob(i, G.home[seat]); });
+}
+function arrUp(e) {
+  if (!arr || arr.pid !== e.pointerId) return;
+  const { order, k } = arr; arr = null;
+  // glide the dropped circle into its new seat; nothing is redrawn
+  $('#kn' + k).classList.remove('active');
+  placeKnob(k, G.home[order.indexOf(k)]);
+  if (!order.some((v, i) => v !== i)) return;
+  const g = S.game, seatOf = order.map((_, i) => order.indexOf(i)); // old seat -> new seat
+  g.players = order.map(i => g.players[i]);
+  for (const h of [...g.history, ...(g.redo || [])]) { if (!h.id) h.id = histId(h); if (h.i >= 0) h.i = seatOf[h.i]; }
+  save();
+  // relabel the existing circles so their ids match the new seats
+  const els = order.map(i => $('#kn' + i));
+  els.forEach((el, seat) => { el.id = 'kn' + seat; el.dataset.k = seat; });
+}
+function gActions() {
+  return arranging
+    ? '<div class="g-actions"><button class="btn primary" data-act="gDone">Done rearranging</button></div>'
+    : '<div class="g-actions"><button class="btn" data-act="gNew">New game</button><button class="btn" data-act="gReset">Reset</button><button class="btn" data-act="gArrange">Rearrange</button></div>';
+}
+// switch rearrange mode in place, so the dial never flashes
+function setArranging(on) {
+  arranging = on;
+  const game = $('#game'), ring = $('#ring');
+  if (!game || !ring) { render(); return; }
+  game.classList.toggle('arranging', on);
+  ring.classList.toggle('arranging', on);
+  if (!on) {
+    const r = scoreRows(S.game.players.map(pinfo), true), tmp = document.createElement('div');
+    tmp.innerHTML = r.top + r.bot;
+    const oldTop = game.querySelector('.srow.top'), oldBot = game.querySelector('.srow.bottom');
+    const newTop = tmp.querySelector('.srow.top'), newBot = tmp.querySelector('.srow.bottom');
+    if (oldTop && newTop) oldTop.replaceWith(newTop);
+    if (oldBot && newBot) oldBot.replaceWith(newBot);
+    sizeScores();
+  }
+  game.querySelector('.g-actions').outerHTML = gActions();
+  idleCenter();
+}
+
+function confirmSheet(title, body, okLabel, onOk, danger) {
+  return {
+    render() {
+      return `${sheetHead(title)}<p class="note" style="margin:0 0 20px;font-size:15px">${body}</p>
+        <div class="actions"><button class="btn ${danger ? 'danger armed' : 'primary'}" data-sact="ok">${okLabel}</button>
+        <button class="btn ghost" data-sact="cancel">Cancel</button></div>`;
+    },
+    act(a) { if (a === 'ok') { sheets = []; renderSheet(); onOk(); } else closeSheet(); }
+  };
+}
+
+/* ---------------- actions ---------------- */
+function startGame() {
+  if (!sel.length) return;
+  const ps = sel.map(person).filter(Boolean);
+  S.game = { id: uid(), startedAt: Date.now(), players: ps.map(p => ({ id: p.id, name: p.name, color: p.color, emoji: p.emoji, score: 0 })), history: [], redo: [], step: nextStep, turn: TURN_DEFAULT[nextStep] || 36 };
+  nextStep = 1;
+  const ids = ps.map(p => p.id), key = [...ids].sort().join();
+  S.recents = [{ ids, at: Date.now() }, ...S.recents.filter(r => [...r.ids].sort().join() !== key)].slice(0, 5);
+  arranging = false;
+  save(); view = 'game'; render();
+}
+function toggle(id) {
+  const i = sel.indexOf(id);
+  if (i >= 0) sel.splice(i, 1);
+  else if (sel.length >= MAX_PLAYERS) { toast(`Up to ${MAX_PLAYERS} players fit on the dial`); return; }
+  else sel.push(id);
+  render();
+}
+
+document.addEventListener('click', e => {
+  const mp = e.target.closest('[data-mp]');
+  if (mp) { if (mp.dataset.mp === 'ret') closeMore(); else pickMore(+mp.dataset.mp); return; }
+  const sb = e.target.closest('[data-sact]');
+  if (sb) { const s = sheets[sheets.length - 1]; s && s.act && s.act(sb.dataset.sact, sb.dataset.v); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  switch (a) {
+    case 'resume': arranging = false; view = 'game'; render(); break;
+    case 'gNew': openSheet(confirmSheet('Start a new game?', 'You’ll choose players next. This game stays saved until you start the new one.', 'Start a new game', () => {
+      sel = S.game.players.map(p => p.id).filter(person); nextStep = 1; arranging = false; view = 'picker'; render();
+    })); break;
+    case 'gReset': openSheet(confirmSheet('Reset all scores?', 'Every score in this game goes back to 0 and the history is cleared.', 'Reset scores to 0', () => {
+      S.game.players.forEach(p => p.score = 0); (S.game.bench || []).forEach(p => p.score = 0); S.game.history = []; S.game.redo = []; save(); refreshScores(); toast('Scores reset');
+    }, true)); break;
+    case 'gArrange': setArranging(true); break;
+    case 'gDone': setArranging(false); break;
+    case 'newGame': sel = []; nextStep = 1; view = 'picker'; render(); break;
+    case 'nextStep': nextStep = +b.dataset.v; render(); break;
+    case 'go': view = b.dataset.v; render(); break;
+    case 'toggle': toggle(id); break;
+    case 'pickRecent': { const r = S.recents[+b.dataset.i]; sel = r.ids.filter(person).slice(0, MAX_PLAYERS); render(); break; }
+    case 'groupAll': {
+      const g = S.groups.find(x => x.id === id), ms = g.members.filter(person);
+      if (ms.every(x => sel.includes(x))) sel = sel.filter(x => !ms.includes(x));
+      else { for (const x of ms) if (!sel.includes(x) && sel.length < MAX_PLAYERS) sel.push(x); }
+      render(); break;
+    }
+    case 'editGroup': openSheet(groupSheet(id)); break;
+    case 'newGroup': openSheet(groupSheet(null)); break;
+    case 'addPerson': openSheet(personSheet(null, { group: b.dataset.group, select: true })); break;
+    case 'editPerson': openSheet(personSheet(id)); break;
+    case 'start': startGame(); break;
+    case 'rotate': {
+      const gp = S.game.players[+b.dataset.k];
+      gp.rot = (gp.rot || 0) + 90; save();
+      b.querySelector('.sc-in').style.transform = `rotate(${gp.rot}deg)`;
+      break;
+    }
+    case 'history': openSheet(historySheet()); break;
+    case 'settings': openSheet(settingsSheet()); break;
+    case 'closeSheet': closeSheet(); if (view === 'game') refreshScores(); break;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && sheets.length) closeSheet();
+  if (e.key === 'Enter' && e.target.matches('#pname,#gname')) { const s = sheets[sheets.length - 1]; s && s.act('save'); }
+});
+
+render();
+
+/* ---------------- install prompt ---------------- */
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; const b = $('#installNow'); if (b) b.hidden = false; });
+addEventListener('appinstalled', () => { installEvt = null; hideInstall(); });
+const SHARE_ICON = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Share"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+const DOTS_ICON = '<svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-label="Menu"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+function installSteps() {
+  const ua = navigator.userAgent;
+  const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) {
+    const other = /CriOS|FxiOS|EdgiOS/.test(ua);
+    return { device: other ? 'iPhone or iPad' : 'iPhone or iPad (Safari)', steps: [
+      `Tap the Share button ${SHARE_ICON} ${other ? 'next to the address bar' : 'in the toolbar at the bottom of Safari'}.`,
+      'Scroll down and tap <b>Add to Home Screen</b>.',
+      'Tap <b>Add</b>, then open Scoredial from your Home Screen.'
+    ] };
+  }
+  if (/Android/.test(ua)) return { device: 'Android', steps: [
+    `Tap the menu ${DOTS_ICON} in the top corner of your browser.`,
+    'Tap <b>Install app</b> or <b>Add to Home screen</b>.',
+    'Confirm, then open Scoredial from your Home screen.'
+  ] };
+  if (/Safari/.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return { device: 'Mac (Safari)', steps: [
+    'In the menu bar, choose <b>File</b> › <b>Add to Dock</b>.',
+    'Click <b>Add</b>, then open Scoredial from your Dock.'
+  ] };
+  if (/Firefox/.test(ua)) return { device: 'Firefox', steps: [
+    'Firefox on computers can’t install web apps.',
+    'Open this page in Chrome, Edge or Safari, then install it from there.'
+  ] };
+  return { device: 'computer', steps: [
+    'Click the install icon at the right end of the address bar, or open the browser menu.',
+    'Choose <b>Install Scoredial</b>.',
+    'Open Scoredial from your apps or Dock.'
+  ] };
+}
+function showInstall() {
+  if (isStandalone() || $('#install')) return;
+  const { device, steps } = installSteps();
+  const el = document.createElement('div');
+  el.id = 'install'; el.className = 'install'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'installTitle');
+  el.innerHTML = `<button class="icon-btn install-x" data-inst="close" aria-label="Close">${I.close}</button>
+    <div class="install-in">
+      <div class="install-mark">${I.mark}</div>
+      <h2 id="installTitle">Install Scoredial</h2>
+      <p class="install-lead">Add it to your Home Screen so it opens full screen, works without a connection, and keeps your games ready.</p>
+      <button class="btn primary" id="installNow" data-inst="now" ${installEvt ? '' : 'hidden'}>Install now</button>
+      <div class="install-how"><div class="eyebrow">On your ${device}</div>
+        <ol>${steps.map(t => `<li>${t}</li>`).join('')}</ol></div>
+      <button class="btn ghost" data-inst="close">Not now</button>
+    </div>`;
+  document.body.appendChild(el);
+}
+function hideInstall() { const el = $('#install'); if (el) el.remove(); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-inst]'); if (!b) return;
+  if (b.dataset.inst === 'now' && installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; hideInstall(); }); }
+  else hideInstall();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#install')) hideInstall(); });
+showInstall(); // every fresh load, until it's opened as an installed app
+
+/* ---------------- updates ---------------- */
+let swReg = null, updating = false;
+function showUpdate() {
+  if (updating || $('#updateBar')) return;
+  const el = document.createElement('div');
+  el.id = 'updateBar'; el.className = 'update-bar'; el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="ub-text"><b>A new version is ready</b><span>Your games stay saved.</span></div>
+    <button class="btn primary" data-upd="go">Update</button><button class="icon-btn sm" data-upd="later" aria-label="Not now">${I.close}</button>`;
+  document.body.appendChild(el);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-upd]'); if (!b) return;
+  const bar = $('#updateBar');
+  if (b.dataset.upd === 'go' && swReg && swReg.waiting) { updating = true; b.textContent = 'Updating…'; swReg.waiting.postMessage({ type: 'skip' }); }
+  else if (bar) bar.remove(); // dismissed for now; asks again next time the app comes back into focus
+});
+function checkUpdate() {
+  if (!swReg || updating) return;
+  swReg.update().catch(() => {}).finally(() => { if (swReg.waiting && navigator.serviceWorker.controller) showUpdate(); });
+}
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !/claude/.test(location.hostname)) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swReg = reg;
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdate();
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (w) w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdate(); });
+    });
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (updating) location.reload(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+  addEventListener('focus', checkUpdate);
+}
+})();
+</script>
+
+</body>
+</html>
